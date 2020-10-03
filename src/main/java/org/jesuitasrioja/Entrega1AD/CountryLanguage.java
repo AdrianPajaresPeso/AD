@@ -1,11 +1,13 @@
 package org.jesuitasrioja.Entrega1AD;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
-@Data
+@Data @AllArgsConstructor @NoArgsConstructor
 public class CountryLanguage {
 	private String countryCode;
 	private String language;
-	private boolean isOfficial;
+	private String isOfficial;
 	private float percentage;
 }

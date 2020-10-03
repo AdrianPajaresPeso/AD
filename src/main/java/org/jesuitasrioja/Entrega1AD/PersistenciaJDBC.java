@@ -9,6 +9,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -19,6 +20,9 @@ public class PersistenciaJDBC implements IPersistencia {
 	private String userPassword = "root";
 	private String conexion = "jdbc:mysql://localhost:3306/world?serverTimezone=UTC";
 
+	/**
+	 * Establece una lista de ciudades
+	 */
 	@Override
 	public Set<City> listaCiudades() {
 		Connection con = null;
@@ -79,7 +83,7 @@ public class PersistenciaJDBC implements IPersistencia {
 					con.close();
 				}
 			} catch (Exception e2) {
-				// TODO: handle exception
+				e2.printStackTrace();
 			}
 		}
 		return sCountry;
@@ -185,7 +189,7 @@ public class PersistenciaJDBC implements IPersistencia {
 					con.close();
 				}
 			} catch (Exception e2) {
-				// TODO: handle exception
+				e2.printStackTrace();
 			}
 		}
 		return c;
@@ -219,7 +223,7 @@ public class PersistenciaJDBC implements IPersistencia {
 					con.close();
 				}
 			} catch (Exception e2) {
-				// TODO: handle exception
+				e2.printStackTrace();
 			}
 		}
 		return returnCiudad;
@@ -227,8 +231,31 @@ public class PersistenciaJDBC implements IPersistencia {
 
 	@Override
 	public Country getPaisDeCiudad(Integer codCiudad) {
-		// TODO Auto-generated method stub
-		return null;
+		Connection con = null;
+		Country c = null;
+		try {
+			con = DriverManager.getConnection(conexion, userPassword, userPassword);
+			PreparedStatement ps = con.prepareStatement(
+					"Select * from country where code in (Select CountryCode from city where ID = ?)");
+			ps.setInt(1, codCiudad);
+			ResultSet rs = ps.executeQuery();
+			if (rs.next()) {
+				c = new Country(rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4), rs.getFloat(5),
+						rs.getInt(6), rs.getInt(7), rs.getFloat(8), rs.getFloat(9), rs.getFloat(10), rs.getString(11),
+						rs.getString(12), rs.getString(13), rs.getInt(14), rs.getString(15));
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				if (con != null) {
+					con.close();
+				}
+			} catch (Exception e2) {
+				e2.printStackTrace();
+			}
+		}
+		return c;
 	}
 
 	@Override
@@ -257,14 +284,71 @@ public class PersistenciaJDBC implements IPersistencia {
 
 	@Override
 	public List<CountryLanguage> getAllLanguages() {
+		Connection con = null;
+		List<CountryLanguage> listaIdiomas = new ArrayList<>();
+		try {
+			con = DriverManager.getConnection(conexion, userPassword, userPassword);
+			PreparedStatement ps = con.prepareStatement("Select * from countrylanguage");
+
+			ResultSet rs = ps.executeQuery();
+
+			while (rs.next()) {
+				CountryLanguage cl = new CountryLanguage(rs.getString(1), rs.getString(2), rs.getString(3),
+						rs.getFloat(4));
+				listaIdiomas.add(cl);
+			}
+			rs.close();
+			ps.close();
+			con.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				if (con != null) {
+					con.close();
+				}
+			} catch (Exception e2) {
+				e2.printStackTrace();
+			}
+		}
 		// TODO Auto-generated method stub
-		return null;
+		return listaIdiomas;
 	}
 
 	@Override
 	public Set<CountryLanguage> listaIdiomas(String codPais) {
-		// TODO Auto-generated method stub
-		return null;
+		Connection con = null;
+		Set<CountryLanguage> clSetReturn = new HashSet<>();
+		try {
+			con = DriverManager.getConnection(conexion, userPassword, userPassword);
+			if (this.existePais(codPais)) {
+				PreparedStatement ps = con.prepareStatement(
+						"Select * from countrylanguage where countrycode in (Select Code from country where code = ?)");
+				ps.setString(1, codPais);
+				ResultSet rs = ps.executeQuery();
+				while (rs.next()) {
+					CountryLanguage cl = new CountryLanguage(rs.getString(1), rs.getString(2), rs.getString(3),
+							rs.getFloat(4));
+					clSetReturn.add(cl);
+				}
+				rs.close();
+				ps.close();
+			} else {
+				System.out.println("No existe el pais seleccionado");
+			}
+			con.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				if (con != null) {
+					con.close();
+				}
+			} catch (Exception e2) {
+				e2.printStackTrace();
+			}
+		}
+		return clSetReturn;
 	}
 
 }
