@@ -13,8 +13,17 @@ public class App {
 //		System.out.println(ip.getCountry("ESP"));
 //		System.out.println(ip.listaCiudades("Spain"));
 //		System.out.println(ip.listaCiudades());
-//		System.out.println(ip.getAllLanguages());
+//		System.out.println(ip.getAllLanguages());//no termina de mostrar y no se porque
 //		System.out.println(ip.getPaisDeCiudad(55));
-		System.out.println(ip.listaIdiomas("ESP"));
+//		System.out.println(ip.listaIdiomas("ESP"));
+//		System.out.println(ip.getCity(413));
+//		System.out.println(ip.estaCiudadEnPais(711, "ESP"));
+//		ip.cambiarNombreCiudad(1, "Kabul");
+//		ip.cambiarNombreCiudad(1, "HolaCarlos");
+
+		Country c = new Country("JAS", "Patata", "Asia", "Norte", 192.16f, 420, 69, 41, 456.15f, 54.646f, "conQueso",
+				"DictaduraAdriatica", "Adrian", 1, "cpa");
+
+		ip.addPais(c);
 	}
 }
