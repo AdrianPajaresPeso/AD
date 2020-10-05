@@ -21,9 +21,11 @@ public class App {
 //		ip.cambiarNombreCiudad(1, "Kabul");
 //		ip.cambiarNombreCiudad(1, "HolaCarlos");
 
-		Country c = new Country("JAS", "Patata", "Asia", "Norte", 192.16f, 420, 69, 41, 456.15f, 54.646f, "conQueso",
-				"DictaduraAdriatica", "Adrian", 1, "cpa");
+		Country c = new Country("HOL", "Patata", "Asia", "Norte", 192.16f, 420, 69, 41, 456.15f, 54.646f, "conQueso",
+				"DictaduraAdriatica", "Adrian", 1, "CP");
 
+		City ci = new City(1, "Macarroni", c, "ConQuesoni", 115);
 		ip.addPais(c);
+		ip.addCiudad(ci);
 	}
 }

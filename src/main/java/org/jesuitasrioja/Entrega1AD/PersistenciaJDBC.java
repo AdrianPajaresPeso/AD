@@ -362,24 +362,54 @@ public class PersistenciaJDBC implements IPersistencia {
 
 	@Override
 	public void addCiudad(City nuevoNombre) {
-		// TODO Auto-generated method stub
+		Connection con = null;
+		int lastRows = 0;
+		int newRows = 0;
+		try {
+			con = DriverManager.getConnection(conexion, userPassword, userPassword);
+			PreparedStatement ps = con.prepareStatement("Select COUNT(ID) FROM city");
+			ResultSet rs = ps.executeQuery();
+	
+			if (rs.next())	lastRows = rs.getInt(1); //lineas de la BBDD sin insert
+
+			ps = con.prepareStatement(
+					"INSERT INTO city (ID, Name, CountryCode, District, Population) values (?,?,?,?,?)");
+			ps.setInt(1, lastRows + 1);
+			ps.setString(2, nuevoNombre.getName());
+			ps.setString(3, nuevoNombre.getCountry().getCode());
+			ps.setString(4, nuevoNombre.getDistrict());
+			ps.setInt(5, nuevoNombre.getPopulation());
+
+			ps.executeUpdate();
+
+			ps = con.prepareStatement("Select COUNT(ID) FROM city"); //cuenta las lineas que hay de nuevo
+			rs = ps.executeQuery();
+			if (rs.next()) newRows = rs.getInt(1); // nuevo valor de lineas en la bbdd
+
+			if(lastRows < newRows) {
+				System.out.println("Se ha añadido la ciudad a la base de datos");
+			}
+			rs.close();
+			ps.close();
+			con.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 	}
 
 	@Override
 	public void addPais(Country nuevoPais) {
 		Connection con = null;
+		int lastRows = 0;
+		int newRows = 0;
 		try {
 			con = DriverManager.getConnection(conexion, userPassword, userPassword);
-
-			PreparedStatement rows = con.prepareStatement("Select COUNT(code) from country");
+			PreparedStatement rows = con.prepareStatement("SELECT COUNT(Code) FROM country");
 			ResultSet rs = rows.executeQuery();
-			int lastRows;
-
-			if (rs.next())
-				lastRows = rs.getInt(1);
-
+			if(rs.next()) lastRows = rs.getInt(1);
+			
 			PreparedStatement ps = con.prepareStatement(
-					"INSERT INTO country (Code, Name, Continent, Region, SurfaceArea, IndepYear, Population, LifeExpectancy, GNP, GNPOld, LocalName, GovernmentForm, HeadOfState, Capital, Code2) values(Code = ?, name = ?, Continent = ?, Region = ?, SurfaceArea= ?, IndepYear = ?, Population = ?, LifeExpectancy = ?, GNP = ?, GNPOld = ?, LocalName = ?, GovernmentForm = ?, HeadOfState = ?, Capital = ?, Code2 = ?)");
+					"INSERT INTO country (Code, Name, Continent, Region, SurfaceArea, IndepYear, Population, LifeExpectancy, GNP, GNPOld, LocalName, GovernmentForm, HeadOfState, Capital, Code2) values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 			ps.setString(1, nuevoPais.getCode());
 			ps.setString(2, nuevoPais.getName());
 			ps.setString(3, nuevoPais.getContinent());
@@ -396,9 +426,14 @@ public class PersistenciaJDBC implements IPersistencia {
 			ps.setInt(14, nuevoPais.getCapital());
 			ps.setString(15, nuevoPais.getCode2());
 
-			int afectedRows = ps.executeUpdate();
-			System.out.println("Se ha ejecutado la consulta con un total de " + afectedRows + " fila(s) afectada(s)");
+			ps.executeUpdate();
+			
+			rs = rows.executeQuery();
+			if(rs.next()) newRows = rs.getInt(1);
+			if(lastRows<newRows) System.out.println("Se ha añadido el pais a la base de datos");
+			
 			rs.close();
+			rows.close();
 			ps.close();
 			con.close();
 		} catch (SQLException e) {
