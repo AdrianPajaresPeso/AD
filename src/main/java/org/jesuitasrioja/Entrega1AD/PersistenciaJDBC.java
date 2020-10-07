@@ -17,8 +17,6 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
-import com.mysql.cj.jdbc.Driver;
-
 public class PersistenciaJDBC implements IPersistencia {
 
 	// parametros de la conexion
@@ -28,11 +26,15 @@ public class PersistenciaJDBC implements IPersistencia {
 
 	/**
 	 * Constructor de la clase que inicializa los parametros de conexion
-	 * */
+	 */
 	public PersistenciaJDBC() {
 		try {
 			Properties p = new Properties();
 			p.load(new FileInputStream("src/main/resources/propiedades.properties"));
+			this.user = p.getProperty("user");
+			this.pass = p.getProperty("pass");
+			this.url = p.getProperty("url");
+
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -60,10 +62,7 @@ public class PersistenciaJDBC implements IPersistencia {
 				returnCiudad.add(c);
 			}
 
-			// se cierran conexiones
-			rs.close();
-			ps.close();
-			con.close();
+			closeAll(con, ps, rs);
 
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -79,6 +78,13 @@ public class PersistenciaJDBC implements IPersistencia {
 			}
 		}
 		return returnCiudad;
+	}
+
+	private void closeAll(Connection con, PreparedStatement ps, ResultSet rs) throws SQLException {
+		// se cierran conexiones
+		rs.close();
+		ps.close();
+		con.close();
 	}
 
 	/**
@@ -107,10 +113,8 @@ public class PersistenciaJDBC implements IPersistencia {
 				sCountry.add(c);
 			}
 
-			// cerramos la conexion, el ResultSet y el PreparedStatement
-			rs.close();
-			ps.close();
-			con.close();
+			closeAll(con, ps, rs);
+
 		} catch (SQLException e) {
 			e.printStackTrace();
 
@@ -162,10 +166,7 @@ public class PersistenciaJDBC implements IPersistencia {
 					flag = true;
 			}
 
-			// cerramos ResultSet, PreparedStatement y conexion
-			rs.close();
-			ps.close();
-			con.close();
+			closeAll(con, ps, rs);
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -201,9 +202,11 @@ public class PersistenciaJDBC implements IPersistencia {
 		Boolean flag = false;
 		Connection con = null;
 		try {
+			// crear conexion
 			con = DriverManager.getConnection(url, user, pass);
-			PreparedStatement ps = con.prepareStatement("Select * from country where country.Code = ? ");
 
+			// preparar la query
+			PreparedStatement ps = con.prepareStatement("Select * from country where country.Code = ? ");
 			ps.setString(1, codPais);
 
 			ResultSet rs = ps.executeQuery();
@@ -212,10 +215,8 @@ public class PersistenciaJDBC implements IPersistencia {
 				if (rs.getString(1).equals(codPais))
 					flag = true;
 			}
-			// cerramos ResultSet, PreparedStatement y conexion.
-			rs.close();
-			ps.close();
-			con.close();
+
+			closeAll(con, ps, rs);
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -257,17 +258,14 @@ public class PersistenciaJDBC implements IPersistencia {
 			PreparedStatement ps = con.prepareStatement("Select * from city where ID = ?");
 			ps.setInt(1, codCiudad);
 
+			// ejecuta la query y recoge el resultado
 			ResultSet rs = ps.executeQuery();
-
 			if (rs.next()) {
 				c = new City(rs.getInt(1), rs.getString(2), this.getCountry(rs.getString(3)), rs.getString(4),
 						rs.getInt(5));
 			}
 
-			// Se cierra el resultSet, el preparedStatement y la conexion
-			rs.close();
-			ps.close();
-			con.close();
+			closeAll(con, ps, rs);
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -293,21 +291,25 @@ public class PersistenciaJDBC implements IPersistencia {
 	@Override
 	public Country getCountry(String codPais) {
 		Connection con = null;
+		// Country para devolver los datos
 		Country c = null;
 		try {
+
+			// creamos la conexion con la BBDD
 			con = DriverManager.getConnection(url, user, pass);
 
+			// preparamos la query
 			PreparedStatement ps = con.prepareStatement("Select * From country WHERE code = ?");
 			ps.setString(1, codPais);
+
+			// Ejecutamos la query y creamos el pais para devolverlo
 			ResultSet rs = ps.executeQuery();
 			if (rs.next()) {
 				c = new Country(rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4), rs.getFloat(5),
 						rs.getInt(6), rs.getInt(7), rs.getFloat(8), rs.getFloat(9), rs.getFloat(10), rs.getString(11),
 						rs.getString(12), rs.getString(13), rs.getInt(14), rs.getString(15));
 			}
-			rs.close();
-			ps.close();
-			con.close();
+			closeAll(con, ps, rs);
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -323,25 +325,36 @@ public class PersistenciaJDBC implements IPersistencia {
 		return c;
 	}
 
+	/**
+	 * Devuelve una lista de ciudades que se encuentren en el pais especificado por
+	 * parametro
+	 * 
+	 */
 	@Override
 	public Set<City> listaCiudades(String nombrePais) {
 		Connection con = null;
+		// variable de retorno de datos
 		Set<City> returnCiudad = new HashSet<>();
 		try {
+			// creamos la conexion con la BBDD
 			con = DriverManager.getConnection(url, user, pass);
 
+			// preparamos la query
 			PreparedStatement ps = con.prepareStatement(
 					"SELECT * FROM world.city c join world.country co on c.CountryCode = co.Code where co.Name =?");
 			ps.setString(1, nombrePais);
+
+			// ejecutamos la query y llamamos a getCountry
 			ResultSet rs = ps.executeQuery();
 			while (rs.next()) {
+				// en la medida de los posible, es preferible no utilizar getCountry con
+				// conexion nueva
 				City c = new City(rs.getInt(1), rs.getString(2), this.getCountry(rs.getString(3)), rs.getString(4),
 						rs.getInt(5));
 				returnCiudad.add(c);
 			}
-			rs.close();
-			ps.close();
-			con.close();
+
+			closeAll(con, ps, rs);
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -357,27 +370,40 @@ public class PersistenciaJDBC implements IPersistencia {
 		return returnCiudad;
 	}
 
+	/**
+	 * 
+	 * Devielve el pais al que pertenece la ciudad establecida por parametro
+	 * 
+	 */
 	@Override
 	public Country getPaisDeCiudad(Integer codCiudad) {
 		Connection con = null;
+		// pais a devolver
 		Country c = null;
 		try {
+
+			// creamos la connexion
 			con = DriverManager.getConnection(url, user, pass);
+
+			// Preparamos la query
 			PreparedStatement ps = con.prepareStatement(
 					"Select * from country where code in (Select CountryCode from city where ID = ?)");
 			ps.setInt(1, codCiudad);
+
+			// ejecutamos la consulta y guardamos toda la información
 			ResultSet rs = ps.executeQuery();
 			if (rs.next()) {
 				c = new Country(rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4), rs.getFloat(5),
 						rs.getInt(6), rs.getInt(7), rs.getFloat(8), rs.getFloat(9), rs.getFloat(10), rs.getString(11),
 						rs.getString(12), rs.getString(13), rs.getInt(14), rs.getString(15));
 			}
-			rs.close();
-			ps.close();
-			con.close();
+
+			closeAll(con, ps, rs);
 		} catch (Exception e) {
 			e.printStackTrace();
+
 		} finally {
+
 			try {
 				if (con != null) {
 					con.close();
@@ -389,28 +415,41 @@ public class PersistenciaJDBC implements IPersistencia {
 		return c;
 	}
 
+	/**
+	 * Devuelve true si la ciudad que se establece por parametro se encuentra en el
+	 * pais especificado
+	 * 
+	 */
 	@Override
 	public Boolean estaCiudadEnPais(Integer codCiudad, String codPais) {
+		// Bandera que devuelve false por defecto
 		boolean flag = false;
 		Connection con = null;
+
 		try {
+			// creamos la conexion
 			con = DriverManager.getConnection(url, user, pass);
+
+			// preparamos la query
 			PreparedStatement ps = con.prepareStatement(
 					"Select * from country where code in (Select CountryCode from city where ID = ?)");
 			ps.setInt(1, codCiudad);
 
+			// ejecutamos la query
 			ResultSet rs = ps.executeQuery();
-
 			if (rs.next()) {
+				// si el codigo de pais es igual al pasado por parametro bandera cambia a true
 				if (rs.getString(1).equals(codPais))
 					flag = true;
 			}
-			rs.close();
-			ps.close();
-			con.close();
+
+			closeAll(con, ps, rs);
+
 		} catch (Exception e) {
 			e.printStackTrace();
+
 		} finally {
+
 			try {
 				if (con != null) {
 					con.close();
@@ -422,41 +461,54 @@ public class PersistenciaJDBC implements IPersistencia {
 		return flag;
 	}
 
+	/**
+	 * Metodo para cambiar los datos de una ciudad, en concreto el nombre la ciudad
+	 * a modificar y el nombre se establecen por parametro
+	 */
 	@Override
 	public void cambiarNombreCiudad(Integer codCiudad, String nuevoNombre) {
 		Connection con = null;
+		// ciudad antigua para la comprobacion de datos
 		City lastCity = this.getCity(codCiudad);
+		// nueva ciudad para comprobacion de datos
 		City newCity = null;
-		try {
 
+		try {
+			// creamos la conexion con la BBDD
 			con = DriverManager.getConnection(url, user, pass);
+
+			// preparamos la query con el Update
 			PreparedStatement ps = con.prepareStatement("UPDATE city SET Name = ? WHERE ID = ?");
 			ps.setString(1, nuevoNombre);
 			ps.setInt(2, codCiudad);
 
+			// nos devuelve el numero de filas afectadas
 			int rows = ps.executeUpdate();
 			System.out.println("Se ha ejecutado la consulta con un total de " + rows + " fila(s) afectada(s)");
 
-			// comprobacion de que se ha realizado correctamente
+			// segunda query para comprobar el nombre
 			ps = con.prepareStatement("Select * from city where ID = ?");
 			ps.setInt(1, codCiudad);
 
+			// ejecucion de la segunda query
 			ResultSet rs = ps.executeQuery();
 			if (rs.next()) {
 				newCity = new City(rs.getInt(1), rs.getString(2), this.getCountry(rs.getString(3)), rs.getString(4),
 						rs.getInt(5));
 			}
+
+			// comprobacion de datos
 			if (!lastCity.equals(newCity)) {
 				System.out.println("Se ha modificado correctamente");
 			} else {
 				System.out.println("No se han realizado cambios");
 			}
-			rs.close();
-			ps.close();
-			con.close();
+			closeAll(con, ps, rs);
 		} catch (Exception e) {
 			e.printStackTrace();
+
 		} finally {
+
 			try {
 				if (con != null) {
 					con.close();
@@ -467,19 +519,35 @@ public class PersistenciaJDBC implements IPersistencia {
 		}
 	}
 
+	/**
+	 * Metodo que añade una nueva ciudad a la BBDD la ciudad se debe pasar por
+	 * parametro ya construida
+	 * 
+	 */
 	@Override
 	public void addCiudad(City nuevoNombre) {
 		Connection con = null;
+
+		// cantidad de ciudades que encontramos en la BBDD
 		int lastRows = 0;
+		// cantidad nueva de ciudades
 		int newRows = 0;
+
 		try {
+			//creamos la conexion
 			con = DriverManager.getConnection(url, user, pass);
+			
+			//preparamos la query para obtener el numero de ciudades que tenemos (futuras comprobaciones)
 			PreparedStatement ps = con.prepareStatement("Select COUNT(ID) FROM city");
 			ResultSet rs = ps.executeQuery();
 
+			
+			
 			if (rs.next())
 				lastRows = rs.getInt(1); // lineas de la BBDD sin insert
 
+			
+			//nueva consulta, preparación
 			ps = con.prepareStatement(
 					"INSERT INTO city (ID, Name, CountryCode, District, Population) values (?,?,?,?,?)");
 			ps.setInt(1, lastRows + 1);
@@ -488,36 +556,51 @@ public class PersistenciaJDBC implements IPersistencia {
 			ps.setString(4, nuevoNombre.getDistrict());
 			ps.setInt(5, nuevoNombre.getPopulation());
 
+			//ejecutamos la consulta con UPDATE
 			ps.executeUpdate();
 
+			
+			
 			ps = con.prepareStatement("Select COUNT(ID) FROM city"); // cuenta las lineas que hay de nuevo
 			rs = ps.executeQuery();
 			if (rs.next())
 				newRows = rs.getInt(1); // nuevo valor de lineas en la bbdd
 
+			//comprobacion del numero de lineas
 			if (lastRows < newRows) {
 				System.out.println("Se ha añadido la ciudad a la base de datos");
 			}
-			rs.close();
-			ps.close();
-			con.close();
+			closeAll(con, ps, rs);
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
 	}
 
+	/**
+	 * 
+	 * Metodo que añade un nuevo pais a la base de datos
+	 * 
+	 * */
 	@Override
 	public void addPais(Country nuevoPais) {
 		Connection con = null;
+		
+		//numero anterior a la consulta de paises en la BBDD
 		int lastRows = 0;
+		//numero posterior a la consulta
 		int newRows = 0;
+		
 		try {
+			//creamos la conexion con la BBDD
 			con = DriverManager.getConnection(url, user, pass);
+			
+			//preparamos la consulta para tener el numero de paises que tiene la BBDD
 			PreparedStatement rows = con.prepareStatement("SELECT COUNT(Code) FROM country");
 			ResultSet rs = rows.executeQuery();
 			if (rs.next())
 				lastRows = rs.getInt(1);
 
+			//preparamos la consulta para insertar un nuevo pais
 			PreparedStatement ps = con.prepareStatement(
 					"INSERT INTO country (Code, Name, Continent, Region, SurfaceArea, IndepYear, Population, LifeExpectancy, GNP, GNPOld, LocalName, GovernmentForm, HeadOfState, Capital, Code2) values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 			ps.setString(1, nuevoPais.getCode());
@@ -536,18 +619,19 @@ public class PersistenciaJDBC implements IPersistencia {
 			ps.setInt(14, nuevoPais.getCapital());
 			ps.setString(15, nuevoPais.getCode2());
 
-			ps.executeUpdate();
+			ps.executeUpdate();//ejecutar el insert
 
+			//volvemos a ejecutar la query que teniamos con el numero de filas
 			rs = rows.executeQuery();
 			if (rs.next())
 				newRows = rs.getInt(1);
+			//comprobación de numero de paises en BBDD
 			if (lastRows < newRows)
 				System.out.println("Se ha añadido el pais a la base de datos");
 
-			rs.close();
 			rows.close();
-			ps.close();
-			con.close();
+			closeAll(con, ps, rs);
+			
 		} catch (SQLException e) {
 			e.printStackTrace();
 		} finally {
@@ -577,37 +661,46 @@ public class PersistenciaJDBC implements IPersistencia {
 						rs.getFloat(4));
 				lstLanguages.add(cl);
 			}
-			rs.close();
-			ps.close();
-			con.close();
+			closeAll(con, ps, rs);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return lstLanguages;
 	}
 
+	/**
+	 * 
+	 * Retorna una lista de los idiomas
+	 * 
+	 * */
 	@Override
 	public Set<CountryLanguage> listaIdiomas(String codPais) {
 		Connection con = null;
+		//set de return de datos
 		Set<CountryLanguage> clSetReturn = new HashSet<>();
+		
 		try {
-			con = DriverManager.getConnection(url, user, pass);
+			
+			//si existe el pais a buscar procedemos con las consultas
 			if (this.existePais(codPais)) {
+				//creamos la conexion a la BBDD
+				con = DriverManager.getConnection(url, user, pass);
+				//preparamos la consulta 
 				PreparedStatement ps = con.prepareStatement(
 						"Select * from countrylanguage where countrycode in (Select Code from country where code = ?)");
 				ps.setString(1, codPais);
+				
+				//ejecutamos la consulta y recogemos todos los datos
 				ResultSet rs = ps.executeQuery();
 				while (rs.next()) {
 					CountryLanguage cl = new CountryLanguage(rs.getString(1), rs.getString(2), rs.getString(3),
 							rs.getFloat(4));
 					clSetReturn.add(cl);
 				}
-				rs.close();
-				ps.close();
+				closeAll(con, ps, rs);
 			} else {
 				System.out.println("No existe el pais seleccionado");
 			}
-			con.close();
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
